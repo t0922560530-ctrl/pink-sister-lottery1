@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>粉紅姊姊洗頭抽獎</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #ff69b4, #ff1493, #ffc0cb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(255, 20, 147, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+        }
+
+        .title {
+            color: #ff1493;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(255, 20, 147, 0.3);
+            animation: titleBounce 2s ease-in-out infinite;
+        }
+
+        @keyframes titleBounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .pink-sister {
+            font-size: 6em;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-15px) rotate(5deg); }
+            66% { transform: translateY(-5px) rotate(-3deg); }
+        }
+
+        .countdown {
+            font-size: 8em;
+            color: #ff1493;
+            font-weight: bold;
+            text-shadow: 0 0 20px #ff69b4;
+            animation: countdownPulse 1s ease-in-out;
+            margin: 30px 0;
+        }
+
+        @keyframes countdownPulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .result {
+            font-size: 4em;
+            margin: 30px 0;
+            font-weight: bold;
+            animation: resultAppear 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .wash-yes {
+            color: #32cd32;
+            text-shadow: 0 0 15px #32cd32;
+        }
+
+        .wash-no {
+            color: #ff6347;
+            text-shadow: 0 0 15px #ff6347;
+        }
+
+        @keyframes resultAppear {
+            0% { transform: scale(0) rotate(180deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .button {
+            background: linear-gradient(45deg, #ff69b4, #ff1493);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 8px 15px rgba(255, 20, 147, 0.3);
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(255, 20, 147, 0.4);
+            background: linear-gradient(45deg, #ff1493, #ff69b4);
+        }
+
+        .button:active {
+            transform: translateY(0px);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .hearts {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes heartFloat {
+            0% {
+                transform: translateY(0px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .message {
+            font-size: 1.3em;
+            color: #ff1493;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .spinning {
+            animation: spin 0.5s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">✨ 粉紅姊姊洗頭抽獎 ✨</h1>
+        
+        <div class="pink-sister" id="pinkSister">💗</div>
+        
+        <div id="mainContent">
+            <div class="message">今天要洗頭嗎？讓粉紅姊姊來決定吧！</div>
+            <button class="button" id="lotteryBtn" onclick="startLottery()">
+                🎲 開始抽獎
+            </button>
+        </div>
+
+        <div id="countdownContent" class="hidden">
+            <div class="countdown" id="countdownNumber"></div>
+            <div class="message">準備揭曉答案...</div>
+        </div>
+
+        <div id="resultContent" class="hidden">
+            <div class="result" id="resultText"></div>
+            <div class="message" id="resultMessage"></div>
+            <button class="button" onclick="resetLottery()" style="margin-top: 20px;">
+                🔄 再抽一次
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let isRunning = false;
+
+        // 音效函數（使用Web Audio API創建簡單音效）
+        function createBeepSound(frequency, duration) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playCountdownSound() {
+            createBeepSound(800, 0.2);
+        }
+
+        function playResultSound(isWash) {
+            if (isWash) {
+                // 洗頭 - 上升音階
+                setTimeout(() => createBeepSound(400, 0.15), 0);
+                setTimeout(() => createBeepSound(500, 0.15), 100);
+                setTimeout(() => createBeepSound(600, 0.15), 200);
+                setTimeout(() => createBeepSound(800, 0.3), 300);
+            } else {
+                // 不洗頭 - 下降音階
+                setTimeout(() => createBeepSound(600, 0.15), 0);
+                setTimeout(() => createBeepSound(500, 0.15), 100);
+                setTimeout(() => createBeepSound(400, 0.15), 200);
+                setTimeout(() => createBeepSound(300, 0.3), 300);
+            }
+        }
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.innerHTML = '💖';
+            heart.className = 'hearts';
+            heart.style.left = Math.random() * window.innerWidth + 'px';
+            heart.style.top = window.innerHeight + 'px';
+            heart.style.animation = 'heartFloat 3s linear forwards';
+            document.body.appendChild(heart);
+
+            setTimeout(() => {
+                heart.remove();
+            }, 3000);
+        }
+
+        function startLottery() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            document.getElementById('lotteryBtn').disabled = true;
+            document.getElementById('pinkSister').classList.add('spinning');
+            
+            // 隱藏主要內容，顯示倒數
+            document.getElementById('mainContent').classList.add('hidden');
+            document.getElementById('countdownContent').classList.remove('hidden');
+            
+            let countdown = 3;
+            const countdownElement = document.getElementById('countdownNumber');
+            
+            function updateCountdown() {
+                countdownElement.textContent = countdown;
+                countdownElement.style.animation = 'none';
+                setTimeout(() => {
+                    countdownElement.style.animation = 'countdownPulse 1s ease-in-out';
+                }, 10);
+                
+                playCountdownSound();
+                
+                if (countdown > 1) {
+                    countdown--;
+                    setTimeout(updateCountdown, 1000);
+                } else {
+                    setTimeout(showResult, 1000);
+                }
+            }
+            
+            updateCountdown();
+        }
+
+        function showResult() {
+            // 隨機決定結果
+            const shouldWash = Math.random() > 0.5;
+            
+            // 隱藏倒數，顯示結果
+            document.getElementById('countdownContent').classList.add('hidden');
+            document.getElementById('resultContent').classList.remove('hidden');
+            document.getElementById('pinkSister').classList.remove('spinning');
+            
+            const resultText = document.getElementById('resultText');
+            const resultMessage = document.getElementById('resultMessage');
+            
+            if (shouldWash) {
+                resultText.textContent = '🚿 洗頭！';
+                resultText.className = 'result wash-yes';
+                resultMessage.textContent = '太好了！今天是洗頭的好日子呢～ 💕';
+                document.getElementById('pinkSister').textContent = '🌸';
+            } else {
+                resultText.textContent = '😴 不洗頭！';
+                resultText.className = 'result wash-no';
+                resultMessage.textContent = '今天就偷懶一下吧！明天再洗～ 😊';
+                document.getElementById('pinkSister').textContent = '💤';
+            }
+            
+            // 播放結果音效
+            playResultSound(shouldWash);
+            
+            // 創建愛心特效
+            for (let i = 0; i < 8; i++) {
+                setTimeout(createHeart, i * 200);
+            }
+            
+            isRunning = false;
+        }
+
+        function resetLottery() {
+            document.getElementById('resultContent').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('lotteryBtn').disabled = false;
+            document.getElementById('pinkSister').textContent = '💗';
+        }
+
+        // 初始化時創建一些愛心特效
+        setInterval(() => {
+            if (!isRunning) {
+                createHeart();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
